@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>WinExe</OutputType><UseWPF>true</UseWPF><AssemblyName>ZapretTester</AssemblyName><PlatformTarget>x64</PlatformTarget></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../ZapretTester.Core/ZapretTester.Core.csproj" /></ItemGroup>
+</Project>
