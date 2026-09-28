@@ -20,6 +20,16 @@
 
 Все основные настройки доступны в интерфейсе. В архиве есть **ИНСТРУКЦИЯ.html**: откройте её двойным щелчком для подробного руководства без интернета.
 
+## Где находится League of Legends
+
+Обычно папка игры называется **`League of Legends`** и находится по адресу **`C:\Riot Games\League of Legends`**. Если игру устанавливали на другой диск, путь может быть, например, **`D:\Riot Games\League of Legends`**.
+
+Откройте Проводник (**Win + E**) и вставьте путь в адресную строку. В правильной папке находятся **`LeagueClient.exe`** и **`system.yaml`**, обычно также каталоги `Config` и `Game`. В тестере выберите её через **Настройки → Папка League of Legends → …**.
+
+Если папка не найдена, нажмите правой кнопкой на ярлыке игры → **Расположение файла** или найдите **`LeagueClient.exe`** через поиск в **Этот компьютер**. Ярлык может вести в `Riot Client` — это лаунчер, его папка не подходит. Выбирайте папку самой игры, а не `Riot Client`, вложенную `Game` или отдельный EXE.
+
+[Пошаговый поиск папки, в том числе через Диспетчер задач](docs/USER_GUIDE.ru.md#league).
+
 ## Возможности
 
 - Отдельные вкладки **Discord**, **League of Legends**, **YouTube** и общий **Дашборд**.
@@ -122,3 +132,4 @@ dotnet test ZapretTester.sln
 Zapret Tester — самостоятельный проект, не официальный выпуск Flowseal, Discord, Riot Games или YouTube. Лицензия собственного кода — [MIT](LICENSE).
 
 Спасибо авторам [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube), [bol-van/zapret](https://github.com/bol-van/zapret) и [WinDivert](https://github.com/basil00/WinDivert). Источники тестовых BAT-примеров и лицензии перечислены в [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Названия и значки сервисов используются для обозначения проверяемых служб.
+
