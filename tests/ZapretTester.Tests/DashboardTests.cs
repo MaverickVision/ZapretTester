@@ -114,10 +114,22 @@ public sealed class DashboardTests
             Assert.False(loaded[0].Profiles[0].IsStale);
             Assert.Equal("✓", DashboardProjection.Cards(loaded)[0].Discord.Status.Glyph);
             Assert.Equal("⚠", DashboardProjection.Cards(loaded)[0].League.Status.Glyph);
+            var variant = VariantDescriptor.Create([new(TestSuiteId.Discord)]);
+            var newView = SuiteProjection.Load(flowseal, settings, resultPath, variant);
+            Assert.Null(newView[0].Profiles[0].LastResult); // Independent historical results are never common-variant proof.
+            var combinedFingerprint = VariantAdapter.Fingerprint(profile, FlowsealSnapshot.SourceFingerprint(profile), variant, [SuiteDefinition.Discord]);
+            var combined = Row(profile.Id).LastResult! with
+            { Fingerprint = combinedFingerprint, VariantId = variant.Id, VariantFingerprint = combinedFingerprint, SeriesId = "completed" };
+            JsonFiles.Save(resultPath, new Dictionary<string, ProfileTestResult>
+            { [profile.Id] = Row(profile.Id).LastResult! with { Fingerprint = fingerprint }, [ResultKeys.For(combined)] = combined });
+            Assert.Equal("✓", DashboardProjection.Cards(SuiteProjection.Load(flowseal, settings, resultPath, variant))[0].Discord.Status.Glyph);
+            Assert.Equal("?", DashboardProjection.Cards(SuiteProjection.Load(flowseal, settings, resultPath,
+                VariantDescriptor.Create([new(TestSuiteId.Discord), new(TestSuiteId.Steam)])))[0].Discord.Status.Glyph);
             Assert.Equal(before.Count, Directory.GetFiles(flowseal, "*", SearchOption.AllDirectories).Length);
             foreach (var pair in before) Assert.Equal(pair.Value, File.ReadAllText(pair.Key));
             File.AppendAllText(Path.Combine(flowseal, "lists", "list-general.txt"), "\nchanged.example");
             Assert.True(SuiteProjection.Load(flowseal, settings, resultPath)[0].Profiles[0].IsStale);
+            Assert.True(SuiteProjection.Load(flowseal, settings, resultPath, variant)[0].Profiles[0].IsStale);
             File.WriteAllText(Path.Combine(flowseal, "lists", "list-general.txt"), "fixture");
             File.AppendAllText(bat, "\r\nrem changed profile\r\n");
             Assert.True(SuiteProjection.Load(flowseal, settings, resultPath)[0].Profiles[0].IsStale);

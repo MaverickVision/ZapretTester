@@ -5,7 +5,10 @@ public enum DashboardSortMode { BestFirst, Name }
 public sealed class DashboardPreferences
 {
     public DashboardSortMode SortMode { get; set; } = DashboardSortMode.BestFirst;
-    public TestSuiteId[] VisibleSuites { get; set; } = Enum.GetValues<TestSuiteId>();
+    // Old files may omit this field. New services must not silently join an upgraded selection.
+    public TestSuiteId[] VisibleSuites { get; set; } = [TestSuiteId.Discord, TestSuiteId.LeagueOfLegends, TestSuiteId.YouTube];
+    public static DashboardPreferences New(bool leagueAvailable) => new()
+    { VisibleSuites = Enum.GetValues<TestSuiteId>().Where(s => leagueAvailable || s != TestSuiteId.LeagueOfLegends).ToArray() };
     public Dictionary<string, HashSet<string>> ExcludedProfiles { get; set; } = [];
     private static string FolderKey(string folder) => Path.GetFullPath(folder).ToUpperInvariant();
     public bool IsSelected(string folder, string id) => !ExcludedProfiles.TryGetValue(FolderKey(folder), out var excluded) || !excluded.Contains(id);

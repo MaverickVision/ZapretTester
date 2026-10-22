@@ -5,12 +5,13 @@ using System.Text.RegularExpressions;
 
 namespace ZapretTester.Core;
 
-public enum TestSuiteId { Discord, LeagueOfLegends, YouTube }
+public enum TestSuiteId { Discord = 0, LeagueOfLegends = 1, YouTube = 2, Steam = 3, Twitch = 4, Cloudflare = 5 }
 public sealed record SuiteDefinition(TestSuiteId Id, string Region, IReadOnlyList<TestTarget> Targets, IReadOnlyList<string> Hosts)
 {
     public string Key(string profileId) => ResultKeys.For(Id, Region, profileId);
     public string Fingerprint(string original) => Id == TestSuiteId.Discord ? original
-        : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(original + (Id == TestSuiteId.LeagueOfLegends ? "\nLoLAdapter1\n" : "\nYouTube1\n") + FingerprintJson())));
+        : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(original + (Id switch
+        { TestSuiteId.LeagueOfLegends => "\nLoLAdapter1\n", TestSuiteId.YouTube => "\nYouTube1\n", _ => "\nServiceCatalog1\n" }) + FingerprintJson())));
     // Keep existing Discord/LoL fingerprints stable when extending target policy.
     private string FingerprintJson() => Id == TestSuiteId.LeagueOfLegends
         ? JsonSerializer.Serialize(new { Id, Region, Targets = Targets.Select(t => new { t.Name, t.Url, t.ServiceRoot, t.Require200 }), Hosts })
@@ -25,8 +26,23 @@ public sealed record SuiteDefinition(TestSuiteId Id, string Region, IReadOnlyLis
 public static class ResultKeys
 {
     public static string For(TestSuiteId suite, string? region, string profileId) => $"{suite}|{(suite != TestSuiteId.LeagueOfLegends ? "" : region)}|{profileId}";
-    public static Dictionary<string, ProfileTestResult> Migrate(IReadOnlyDictionary<string, ProfileTestResult> saved) =>
-        saved.Values.ToDictionary(r => For(r.Suite, r.Region, r.ProfileId), r => r);
+    public static string For(string? variantId, TestSuiteId suite, string? region, string profileId) =>
+        string.IsNullOrEmpty(variantId) ? For(suite, region, profileId) : $"variant:{variantId}|{For(suite, region, profileId)}";
+    public static string For(ProfileTestResult result) => For(result.VariantId, result.Suite, result.Region, result.ProfileId);
+    public static string Legacy(TestSuiteId suite, string? region, string profileId) => "legacy:" + For(suite, region, profileId);
+    public static Dictionary<string, ProfileTestResult> Migrate(IReadOnlyDictionary<string, ProfileTestResult> saved)
+    {
+        var migrated = new Dictionary<string, ProfileTestResult>(StringComparer.Ordinal);
+        foreach (var pair in saved)
+        {
+            var r = pair.Value;
+            var key = pair.Key.StartsWith("legacy:", StringComparison.Ordinal) || pair.Key.Contains("|history:", StringComparison.Ordinal)
+                ? pair.Key : string.IsNullOrEmpty(r.VariantId) ? Legacy(r.Suite, r.Region, r.ProfileId) : For(r);
+            if (migrated.ContainsKey(key)) key += "|history:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(pair.Key)));
+            migrated[key] = r;
+        }
+        return migrated;
+    }
 }
 
 public sealed record LeagueInstallation(string Folder, string SelectedRegion, IReadOnlyDictionary<string, SuiteDefinition> Regions);
@@ -121,6 +137,10 @@ public static class LeagueAdapter
     public static IReadOnlyList<string> Adapt(IReadOnlyList<string> original, SuiteDefinition suite)
     {
         if (suite.Id != TestSuiteId.LeagueOfLegends) return original;
+        return AdaptHosts(original, suite.Hosts);
+    }
+    internal static IReadOnlyList<string> AdaptHosts(IReadOnlyList<string> original, IReadOnlyList<string> hosts)
+    {
         var globals = original.Where(a => a.StartsWith("--wf-", StringComparison.Ordinal)).ToArray();
         if (!globals.Any(a => a.StartsWith("--wf-tcp=", StringComparison.Ordinal) && Contains443(a[(a.IndexOf('=') + 1)..])))
             throw new UnsupportedProfileException("Адаптация не поддерживается: capture не включает TCP 443.");
@@ -136,7 +156,7 @@ public static class LeagueAdapter
         if (candidates.Length != 1) throw new UnsupportedProfileException("Адаптация не поддерживается: неоднозначная HTTPS-группа.");
         var cloned = candidates[0].Where(a => !a.StartsWith("--hostlist", StringComparison.Ordinal)
             && !a.StartsWith("--ipset", StringComparison.Ordinal) && !a.StartsWith("--filter-tcp=", StringComparison.Ordinal)).ToArray();
-        return globals.Concat(new[] { "--filter-tcp=443", "--hostlist-domains=" + string.Join(',', suite.Hosts) })
+        return globals.Concat(new[] { "--filter-tcp=443", "--hostlist-domains=" + string.Join(',', hosts) })
             .Concat(cloned).Append("--new").Concat(body).ToArray();
     }
     private static bool Contains443(string ports) => ports.Split(',').Any(p => p == "443" ||

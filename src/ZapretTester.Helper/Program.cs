@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO.Pipes;
 using System.Security.Principal;
 using System.Security.AccessControl;
@@ -51,17 +51,20 @@ try
         using var reader = new StreamReader(pipe, new UTF8Encoding(false), false, 4096, leaveOpen: true);
         var writer = new StreamWriter(pipe, new UTF8Encoding(false), 4096, leaveOpen: true) { AutoFlush = true };
         using var writes = new SemaphoreSlim(1);
-        var pending = new List<Task>();
+        using var connection = new CancellationTokenSource();
         var authenticated = false;
-        async Task Send(HelperMessage message)
+        async Task Send(HelperMessage message, CancellationToken token = default)
         {
-            await writes.WaitAsync();
-            try { await writer.WriteLineAsync(JsonSerializer.Serialize(message)); }
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, connection.Token);
+            await writes.WaitAsync(linked.Token);
+            try { await writer.WriteLineAsync(JsonSerializer.Serialize(message).AsMemory(), linked.Token); }
             catch (IOException) { }
             catch (ObjectDisposedException) { }
+            catch (OperationCanceledException) when (linked.IsCancellationRequested) { }
             finally { writes.Release(); }
         }
-        void Changed(HelperState state) { if (authenticated) { lock (pending) pending.Add(Send(new("State", state))); } }
+        var updates = new StateMessagePump((state, token) => Send(new("State", state), token));
+        void Changed(HelperState state) { if (authenticated) updates.Enqueue(state); }
         runtime.Changed += Changed;
         try
         {
@@ -80,17 +83,24 @@ try
                     {
                         case "State": break;
                         case "SelectSuite": runtime.SelectSuite(request.Suite, request.Region); break;
+                        case "SelectVariant": runtime.SelectVariant(request.Variant ?? throw new ArgumentException("Variant required.")); break;
                         case "Refresh": runtime.Refresh(); break;
                         case "Settings": runtime.UpdateSettings(request.Settings ?? throw new ArgumentException("Settings required.")); break;
-                        case "StartManaged": await runtime.StartManagedAsync(request.ProfileId, request.Suite, request.Region); break;
+                        case "StartManaged": await runtime.ApplyManagedVariantAsync(request.ProfileId, request.Variant ?? throw new ArgumentException("Variant required.")); break;
+                        case "ResumeManaged": await runtime.ResumeManagedAsync(); break;
+                        case "PrepareFlowseal": await runtime.PrepareFlowsealAsync(request.ProfileId); break;
+                        case "ExpandPortPool": await runtime.ExpandPortPoolAsync(request.Settings ?? throw new ArgumentException("Settings required.")); break;
                         case "StopMain": await runtime.StopMainAsync(); break;
                         case "RestoreExternal": await runtime.RestoreExternalAsync(); break;
-                        case "TestBatch": runtime.StartBatch(request.ProfileIds ?? throw new ArgumentException("Profiles required."), request.TestSuites ?? throw new ArgumentException("Suites required.")); break;
+                        case "TestBatch": runtime.StartBatch(request.ProfileIds ?? throw new ArgumentException("Profiles required."), request.Variant?.Selections ?? request.TestSuites ?? throw new ArgumentException("Suites required.")); break;
                         case "Test": runtime.StartTests(request.ProfileId, request.Suite, request.Region); break;
                         case "Cancel": await runtime.CancelAsync(); break;
 #if DEBUG
                         case "FailSharedProcessForAcceptance": runtime.FailSharedProcessForAcceptance = true; break;
                         case "FailNextMainForAcceptance": runtime.FailNextMainForAcceptance = true; break;
+                        case "FailMainPersistenceForAcceptance": runtime.FailMainPersistenceForAcceptance = true; break;
+                        case "FailFinalSaveForAcceptance": runtime.FailFinalSaveForAcceptance = true; break;
+                        case "DelayFinalSaveForAcceptance": runtime.DelayFinalSaveForAcceptance = true; break;
                         case "CrashForAcceptance": Environment.Exit(77); break;
 #endif
                         case "Shutdown":
@@ -110,9 +120,8 @@ try
             runtime.Changed -= Changed;
             authenticated = false;
             await runtime.CancelAsync();
-            Task[] drain;
-            lock (pending) drain = pending.ToArray();
-            await Task.WhenAll(drain);
+            connection.Cancel();
+            await updates.DisposeAsync();
             try { writer.Dispose(); } catch (IOException) { }
         }
         if (!runtime.HasMain) stopping = true;

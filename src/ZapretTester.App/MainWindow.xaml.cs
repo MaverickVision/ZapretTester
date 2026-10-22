@@ -82,6 +82,12 @@ public partial class MainWindow : Window
         if (ReferenceEquals(sender, e.OriginalSource) && sender is FrameworkElement { ToolTip: System.Windows.Controls.ToolTip hint } element)
         { hint.PlacementTarget = element; hint.IsOpen = true; }
     }
+    private void OpenCardDetails(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: DashboardCardRow row }) model.OpenDetails(row);
+    }
+    private void OpenAbout(object sender, RoutedEventArgs e) => new AboutWindow { Owner = this }.ShowDialog();
+    private void OpenFaq(object sender, RoutedEventArgs e) => new FaqWindow { Owner = this }.ShowDialog();
     private void CloseHint(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e)
     {
         if (sender is FrameworkElement { ToolTip: System.Windows.Controls.ToolTip hint }) hint.IsOpen = false;

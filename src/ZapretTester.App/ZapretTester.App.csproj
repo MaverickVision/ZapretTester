@@ -1,4 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>WinExe</OutputType><UseWPF>true</UseWPF><AssemblyName>ZapretTester</AssemblyName><PlatformTarget>x64</PlatformTarget></PropertyGroup>
+  <PropertyGroup><OutputType>WinExe</OutputType><UseWPF>true</UseWPF><AssemblyName>ZapretTester</AssemblyName><PlatformTarget>x64</PlatformTarget><ApplicationIcon>Assets/app.ico</ApplicationIcon></PropertyGroup>
   <ItemGroup><ProjectReference Include="../ZapretTester.Core/ZapretTester.Core.csproj" /></ItemGroup>
+  <ItemGroup><Resource Include="Assets/app.ico"/><Resource Include="Assets/app-icon.png"/></ItemGroup>
+  <ItemGroup><Resource Include="Assets/activity-logo.png"/></ItemGroup>
+  <!-- The standard .NET apphost starts the managed application in app/, using its bundled runtime. -->
+  <Target Name="CreatePortableEntryPoint" AfterTargets="Publish" Condition="'$(PortableRoot)' != ''" DependsOnTargets="_GetAppHostPaths">
+    <CreateAppHost AppHostSourcePath="$(AppHostSourcePath)"
+                   AppHostDestinationPath="$(PortableRoot)/ZapretTester.exe"
+                   AppBinaryName="app/ZapretTester.dll"
+                   IntermediateAssembly="$(PublishDir)ZapretTester.dll"
+                   WindowsGraphicalUserInterface="true"/>
+  </Target>
 </Project>

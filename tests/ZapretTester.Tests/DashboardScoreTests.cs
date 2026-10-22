@@ -47,7 +47,12 @@ public sealed class DashboardScoreTests
             "wrong-target" => row with { LastResult = row.LastResult! with { Endpoints = row.LastResult.Endpoints.Select(e => e with { Name = "Other" + e.Name }).ToArray() } },
             _ => row
         };
-        Assert.Null(Half(row, scenario == "active").Score);
+        var half = Half(row, scenario == "active");
+        Assert.Null(half.Score);
+        Assert.Null(half.SuccessfulEndpoints);
+        Assert.Null(half.HttpsMedianMilliseconds);
+        Assert.Null(half.ResponseScore);
+        Assert.Equal(4, half.TotalEndpoints);
     }
 
     [Fact]

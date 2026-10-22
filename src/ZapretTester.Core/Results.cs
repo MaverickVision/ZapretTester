@@ -10,7 +10,7 @@ public static class RunFailure
 public enum EndpointStatus { Available, Failed, ServerWarning }
 public enum ProfileStatus { Unknown, Success, Partial, Failed, Error }
 public enum FailureStage { Dns, Tcp, Tls, Http, Timeout, Process, Isolation, Port }
-public sealed record TestTarget(string Name, Uri Url, bool ServiceRoot, bool Require200 = false, bool StrictPublic = false)
+public sealed record TestTarget(string Name, Uri Url, bool ServiceRoot, bool Require200 = false, bool StrictPublic = false, string Method = "HEAD")
 {
     public bool Accepts(int code) => Require200 ? code == 200 : StrictPublic ? code is >= 200 and < 400 : code is >= 200 and < 400 or 403 || ServiceRoot && code is 401 or 404 or 405;
     public static IReadOnlyList<TestTarget> Defaults { get; } = [
@@ -24,7 +24,8 @@ public sealed record EndpointResult(string Name, EndpointStatus Status, int Loca
     FailureStage? FailureStage, string? Error);
 public sealed record ProfileTestResult(string ProfileId, string Fingerprint, bool IsReliable,
     IReadOnlyList<EndpointResult> Endpoints, DateTimeOffset TestedAt, string? Error,
-    TestSuiteId Suite = TestSuiteId.Discord, string Region = "", int ExpectedEndpoints = 4, bool PendingValidation = false)
+    TestSuiteId Suite = TestSuiteId.Discord, string Region = "", int ExpectedEndpoints = 4, bool PendingValidation = false,
+    string? VariantId = null, string? VariantFingerprint = null, string? SeriesId = null)
 {
     public ProfileStatus Status => PendingValidation ? ProfileStatus.Unknown : !IsReliable || Error != null ? ProfileStatus.Error
         : Endpoints.Count == 0 ? ProfileStatus.Unknown
@@ -46,7 +47,7 @@ public sealed record ApplicationSettings
     public int Attempts { get; init; } = 2;
     public int TimeoutSeconds { get; init; } = 5;
     public int FirstPort { get; init; } = 41000;
-    public int LastPort { get; init; } = 41999;
+    public int LastPort { get; init; } = 42999;
     public bool AutoTest { get; init; }
     public bool KeepMainRunning { get; init; } = true;
     public string? MainProfileId { get; init; }
@@ -55,9 +56,12 @@ public sealed record ApplicationSettings
     public string? LeagueRegion { get; init; }
     public TestSuiteId MainSuite { get; init; }
     public string MainRegion { get; init; } = "";
+    public VariantDescriptor? MainVariant { get; init; }
+    public string? MainVariantFingerprint { get; init; }
+    public bool MainVariantVerified { get; init; }
     public void Validate()
     {
-        if (MaxParallelTests is < 1 or > 5 || Attempts is < 1 or > 5 || TimeoutSeconds is < 1 or > 60
+        if (MaxParallelTests is < 1 or > 8 || Attempts is < 1 or > 5 || TimeoutSeconds is < 1 or > 60
             || FirstPort < 1024 || LastPort > 65535 || LastPort - FirstPort + 1 < MaxParallelTests * Attempts)
             throw new ArgumentException("Invalid settings or insufficient port pool.");
     }

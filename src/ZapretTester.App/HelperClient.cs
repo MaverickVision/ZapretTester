@@ -20,6 +20,7 @@ public sealed class HelperClient : IAsyncDisposable
     private readonly SemaphoreSlim connects = new(1);
     private readonly CancellationTokenSource stop = new();
     private string nonce = "";
+    private long lastStateRevision = -1;
     private readonly ConcurrentDictionary<string, TaskCompletionSource> replies = new();
     public event Action<HelperMessage>? Message;
     public bool Connected => pipe?.IsConnected == true;
@@ -55,7 +56,7 @@ public sealed class HelperClient : IAsyncDisposable
             catch (Exception e) when (e is TimeoutException or IOException) { pipe?.Dispose(); }
         }
         var helper = Path.Combine(AppContext.BaseDirectory, "ZapretTester.Helper.exe");
-        if (!File.Exists(helper)) throw new FileNotFoundException("ZapretTester.Helper.exe отсутствует рядом с приложением.");
+        if (!File.Exists(helper)) throw new FileNotFoundException("Отсутствует служебный файл ZapretTester.Helper.exe. Распакуйте весь архив вместе с папкой app.");
         var name = "ZapretTester." + Guid.NewGuid().ToString("N");
         nonce = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
         var sid = WindowsIdentity.GetCurrent().User!.Value;
@@ -86,6 +87,7 @@ public sealed class HelperClient : IAsyncDisposable
             throw;
         }
         pipe = connection;
+        lastStateRevision = -1;
         nonce = secret;
         writer = new StreamWriter(pipe, new UTF8Encoding(false), 4096, true) { AutoFlush = true };
         receive = ReceiveAsync(pipe);
@@ -94,6 +96,7 @@ public sealed class HelperClient : IAsyncDisposable
     private async Task ReceiveAsync(NamedPipeClientStream connectedPipe)
     {
         using var reader = new StreamReader(connectedPipe, new UTF8Encoding(false), false, 4096, true);
+        var disconnectError = "Соединение с Helper закрыто.";
         try
         {
             while (!stop.IsCancellationRequested && await reader.ReadLineAsync(stop.Token) is { } line)
@@ -101,14 +104,21 @@ public sealed class HelperClient : IAsyncDisposable
                 var value = JsonSerializer.Deserialize<HelperMessage>(line);
                 if (value != null)
                 {
-                    if (value.State is { ProtocolVersion: < 4 })
+                    if (value.State is { ProtocolVersion: not 6 } incompatibleState)
                     {
+                        disconnectError = $"Версия Helper несовместима (протокол {incompatibleState.ProtocolVersion}; требуется 6). "
+                            + "Завершите старый Helper или перезагрузите компьютер, затем запустите обновлённое приложение.";
                         if (value.RequestId != null && replies.TryRemove(value.RequestId, out var incompatible))
-                            incompatible.TrySetException(new InvalidOperationException("Работает устаревший Helper. Закройте старую версию и перезапустите приложение."));
+                            incompatible.TrySetException(new InvalidOperationException(disconnectError));
                         connectedPipe.Dispose();
                         return;
                     }
-                    Message?.Invoke(value);
+                    // Replies must always complete even if a delayed state is older than an event already received.
+                    if (value.State is not { } snapshot || snapshot.StateRevision >= lastStateRevision)
+                    {
+                        if (value.State != null) lastStateRevision = value.State.StateRevision;
+                        Message?.Invoke(value);
+                    }
                     if (value.RequestId != null && replies.TryRemove(value.RequestId, out var reply))
                     {
                         if (value.Kind == "Error") reply.TrySetException(new IOException(value.Error)); else reply.TrySetResult();
@@ -119,12 +129,12 @@ public sealed class HelperClient : IAsyncDisposable
         catch (Exception e) when (e is IOException or OperationCanceledException or ObjectDisposedException) { }
         finally
         {
-            foreach (var reply in replies.Values) reply.TrySetException(new IOException("Соединение с Helper закрыто."));
+            foreach (var reply in replies.Values) reply.TrySetException(new IOException(disconnectError));
             replies.Clear();
-            Message?.Invoke(new("Disconnected", Error: "Соединение с Helper закрыто."));
+            Message?.Invoke(new("Disconnected", Error: disconnectError));
         }
     }
-    public async Task SendAsync(string command, string? profileId = null, ApplicationSettings? settings = null, TestSuiteId suite = TestSuiteId.Discord, string? region = null, IReadOnlyList<string>? profileIds = null, IReadOnlyList<SuiteSelection>? testSuites = null)
+    public async Task SendAsync(string command, string? profileId = null, ApplicationSettings? settings = null, TestSuiteId suite = TestSuiteId.Discord, string? region = null, IReadOnlyList<string>? profileIds = null, IReadOnlyList<SuiteSelection>? testSuites = null, VariantDescriptor? variant = null)
     {
         if (!Connected || writer == null) throw new IOException("Helper не подключён.");
         var id = Guid.NewGuid().ToString("N");
@@ -133,7 +143,7 @@ public sealed class HelperClient : IAsyncDisposable
         try
         {
             await writes.WaitAsync();
-            try { await writer.WriteLineAsync(JsonSerializer.Serialize(new HelperRequest(command, nonce, profileId, settings, id, suite, region, profileIds, testSuites))); }
+            try { await writer.WriteLineAsync(JsonSerializer.Serialize(new HelperRequest(command, nonce, profileId, settings, id, suite, region, profileIds, testSuites, variant))); }
             finally { writes.Release(); }
             await reply.Task.WaitAsync(TimeSpan.FromSeconds(60), stop.Token);
         }

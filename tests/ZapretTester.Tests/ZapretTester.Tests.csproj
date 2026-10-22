@@ -11,4 +11,10 @@
   <ItemGroup><ProjectReference Include="../../src/ZapretTester.Windows/ZapretTester.Windows.csproj" /></ItemGroup>
   <ItemGroup><Compile Include="../../src/ZapretTester.App/HelperPipeIdentity.cs" Link="HelperPipeIdentity.cs" /></ItemGroup>
   <ItemGroup><Compile Include="../../src/ZapretTester.App/HelperClient.cs" Link="HelperClient.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../../src/ZapretTester.App/UserFacingMessage.cs" Link="UserFacingMessage.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../../src/ZapretTester.App/LiveDashboardProjection.cs" Link="LiveDashboardProjection.cs" /></ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../src/ZapretTester.Helper/SeriesResultWriter.cs" Link="SeriesResultWriter.cs" />
+    <Compile Include="../../src/ZapretTester.Helper/StateMessagePump.cs" Link="StateMessagePump.cs" />
+  </ItemGroup>
 </Project>

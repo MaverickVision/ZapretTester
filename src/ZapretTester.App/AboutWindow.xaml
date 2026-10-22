@@ -1,0 +1,21 @@
+<Window x:Class="ZapretTester.App.AboutWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="О программе — Zapret Tester" Icon="Assets/app.ico" Width="520" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Background="#F4F6F8" Foreground="#182533" FontFamily="Segoe UI" FontSize="14">
+  <StackPanel Margin="28">
+    <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
+      <Image Source="Assets/app-icon.png" Width="72" Height="72" Margin="0,0,16,0" AutomationProperties.Name="Значок Zapret Tester: сигнал и галочка"/>
+      <StackPanel VerticalAlignment="Center">
+        <TextBlock Text="Zapret Tester" FontSize="26" FontWeight="SemiBold"/>
+        <TextBlock x:Name="VersionLabel" Foreground="#5B6876" Margin="0,4,0,0"/>
+      </StackPanel>
+    </StackPanel>
+    <TextBlock Text="Разработчик" Foreground="#5B6876"/>
+    <TextBlock Text="Maverick Vision Productions" FontWeight="SemiBold" FontSize="18" Margin="0,4,0,20" TextWrapping="Wrap"/>
+    <TextBlock Text="Свободное ПО с открытым исходным кодом, распространяемое по лицензии MIT." TextWrapping="Wrap"/>
+    <TextBlock Text="Лицензии сторонних компонентов указаны отдельно в папке app/licenses и файле app/THIRD_PARTY_NOTICES.md." TextWrapping="Wrap" Foreground="#5B6876" FontSize="12" Margin="0,8,0,20"/>
+    <TextBlock Text="Исходный код и обновления" Foreground="#5B6876"/>
+    <TextBlock Margin="0,6,0,24" TextWrapping="Wrap">
+      <Hyperlink NavigateUri="https://github.com/MaverickVision/ZapretTester" RequestNavigate="OpenRepository" Foreground="#0066FF" AutomationProperties.Name="Открыть GitHub проекта в браузере">github.com/MaverickVision/ZapretTester</Hyperlink>
+    </TextBlock>
+    <Button Content="Закрыть" IsCancel="True" IsDefault="True" HorizontalAlignment="Right" MinWidth="100" Margin="0"/>
+  </StackPanel>
+</Window>

@@ -1,0 +1,32 @@
+<Window x:Class="ZapretTester.App.FaqWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="FAQ — Zapret Tester" Icon="Assets/app.ico" Width="610" Height="650" MinWidth="470" MinHeight="420" WindowStartupLocation="CenterOwner" Background="#F4F6F8" Foreground="#182533" FontFamily="Segoe UI" FontSize="13">
+  <Window.Resources>
+    <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="0,0,0,16"/></Style>
+    <Style x:Key="Question" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Margin" Value="0,0,0,5"/><Setter Property="FontSize" Value="14"/></Style>
+  </Window.Resources>
+  <Grid Margin="24">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <TextBlock Text="Коротко о проверках" FontSize="23" FontWeight="SemiBold"/>
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Частые вопросы о Zapret Tester">
+      <StackPanel Margin="0,0,14,0">
+        <TextBlock Style="{StaticResource Question}" Text="Что такое «Доступность»?"/>
+        <TextBlock Text="Число успешных проверок служб: например, 11/12. У каждого сервиса четыре адреса. Рамка отражает долю успехов: от 80% — зелёная, от 50% — янтарная, ниже — красная."/>
+        <TextBlock Style="{StaticResource Question}" Text="Что показывают мс и «Отклик HTTPS»?"/>
+        <TextBlock Text="мс — медиана времени успешных HTTPS-проверок сервиса: подключение TCP, TLS и ответ сервера, без DNS. Меньше — быстрее. Это не игровой и не ICMP-пинг. Отклик HTTPS — отдельный балл 0–10 по этим временам: до 100 мс — 10, от 1000 мс — 0. Доступность оценивается отдельно."/>
+        <TextBlock Style="{StaticResource Question}" Text="Как выбрать проверки?"/>
+        <TextBlock Text="Отметьте сервисы и карточки. «Проверить выбранное» проверит отмеченные стратегии, «Проверить всё» — все найденные для отмеченных сервисов. Галочки во время работы влияют на следующий запуск."/>
+        <TextBlock Style="{StaticResource Question}" Text="Как изменить количество проверок и ускорить серию?"/>
+        <TextBlock Text="Откройте «Настройки». Одновременные процессы: 1–8, по умолчанию 4; каждый выполняет до двух запросов. Попытки на адрес: 1–5. Таймаут DNS + HTTPS: 1–60 секунд. Больше процессов может ускорить серию, но повысить задержки; больше попыток и таймаут увеличивают время ожидания."/>
+        <TextBlock Style="{StaticResource Question}" Text="Почему результаты серые или «Предварительно»?"/>
+        <TextBlock Text="Готовые стратегии обновляются сразу, но их достоверность подтверждается в конце серии. До этого они серые. Прочерк также бывает до проверки, после изменения настроек или файлов, отмены либо конфликта. Причину покажет подсказка."/>
+        <TextBlock Style="{StaticResource Question}" Text="Что означает зелёный результат?"/>
+        <TextBlock Text="Доступность перечисленных HTTPS-служб. Голос и WebSocket Discord, вход и матч LoL, воспроизведение и скорость видео YouTube не проверяются. HTTP 429/5xx — предупреждения сервера, а не успех."/>
+        <TextBlock Style="{StaticResource Question}" Text="Где указать папку и регион LoL?"/>
+        <TextBlock Text="В «Настройках». Обычно игра находится в C:\Riot Games\League of Legends или C:\RiotGames\League of Legends. Нужна папка игры с LeagueClient.exe и system.yaml, а не Riot Client. Выберите регион из её конфигурации."/>
+        <TextBlock Style="{StaticResource Question}" Text="Почему проверке мешает другой Zapret?"/>
+        <TextBlock Text="Посторонний обработчик трафика мешает честному сравнению. Для службы Flowseal используйте «Подготовить Flowseal к проверке» и подтвердите изменения. Другую известную копию обхода закройте вручную. Просмотр FAQ и кнопка «Обновить» сетевые проверки не запускают."/>
+      </StackPanel>
+    </ScrollViewer>
+    <Button Grid.Row="2" Content="Закрыть" IsCancel="True" IsDefault="True" HorizontalAlignment="Right" MinWidth="100" Margin="0,16,0,0"/>
+  </Grid>
+</Window>

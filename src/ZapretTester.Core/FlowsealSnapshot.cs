@@ -4,7 +4,7 @@ using System.Text;
 namespace ZapretTester.Core;
 
 public sealed record SnapshotProfile(ZapretProfile Source, string Executable, string WorkingDirectory,
-    IReadOnlyList<string> Arguments, string Fingerprint);
+    IReadOnlyList<string> Arguments, string Fingerprint, string? SourceFingerprint = null);
 
 // A snapshot freezes the actual selected bundle, including mutable ACTIVE_*.bin.
 public sealed class FlowsealSnapshot
@@ -56,9 +56,17 @@ public sealed class FlowsealSnapshot
         }).ToArray();
         var fingerprint = CombineFingerprint(profile, hashes);
         JsonFiles.Save(Path.Combine(destination, "manifest.json"), new { profile.Id, profile.FileHash, fingerprint, files = hashes });
-        return new(profile, executable, Path.GetDirectoryName(executable)!, arguments, fingerprint);
+        return new(profile, executable, Path.GetDirectoryName(executable)!, arguments, fingerprint, CombineFingerprint(profile, hashes, false));
     }
-    public static string Fingerprint(ZapretProfile profile)
+    public static string Fingerprint(ZapretProfile profile, FingerprintContext? context = null)
+        => ComputeFingerprint(profile, context, true);
+
+    // Common variants add their own selected endpoint policies. Legacy results
+    // retain the original target-bearing hash above for migration/history.
+    public static string SourceFingerprint(ZapretProfile profile, FingerprintContext? context = null)
+        => ComputeFingerprint(profile, context, false);
+
+    private static string ComputeFingerprint(ZapretProfile profile, FingerprintContext? context, bool legacyTargets)
     {
         var root = Path.GetDirectoryName(profile.BatFilePath)!;
         var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { profile.WinwsPath };
@@ -74,20 +82,29 @@ public sealed class FlowsealSnapshot
         foreach (var file in files)
         {
             ProfileParser.EnsureUnder(root, file);
-            byte[] hash;
-            if (File.Exists(file)) { RejectReparse(file); using var input = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read); hash = SHA256.HashData(input); }
+            string hash;
+            if (File.Exists(file))
+            {
+                if (context != null) hash = context.HashFile(file);
+                else
+                {
+                    RejectReparse(file);
+                    using var input = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    hash = Convert.ToHexString(SHA256.HashData(input));
+                }
+            }
             else if (Path.GetDirectoryName(file)!.Equals(Path.Combine(root, "lists"), StringComparison.OrdinalIgnoreCase) && Defaults.TryGetValue(Path.GetFileName(file), out var value))
-                hash = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+                hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
             else throw new FileNotFoundException("Required Flowseal resource is missing.", file);
-            hashes[Path.GetRelativePath(root, file)] = Convert.ToHexString(hash);
+            hashes[Path.GetRelativePath(root, file)] = hash;
         }
-        return CombineFingerprint(profile, hashes);
+        return CombineFingerprint(profile, hashes, legacyTargets);
     }
-    private static string CombineFingerprint(ZapretProfile profile, SortedDictionary<string, string> hashes)
+    private static string CombineFingerprint(ZapretProfile profile, SortedDictionary<string, string> hashes, bool legacyTargets = true)
     {
         var evidence = profile.FileHash + "\n" + string.Join("\n", profile.Arguments) + "\n"
-            + string.Join("\n", hashes.Select(p => p.Key + "=" + p.Value))
-            + "\nHEAD;IPv4;HTTP1.1;Policy1;" + string.Join(";", TestTarget.Defaults.Select(t => t.Name + ":" + t.Url + ":" + t.ServiceRoot));
+            + string.Join("\n", hashes.Select(p => p.Key + "=" + p.Value));
+        if (legacyTargets) evidence += "\nHEAD;IPv4;HTTP1.1;Policy1;" + string.Join(";", TestTarget.Defaults.Select(t => t.Name + ":" + t.Url + ":" + t.ServiceRoot));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(evidence)));
     }
     public static void RejectReparse(string path)

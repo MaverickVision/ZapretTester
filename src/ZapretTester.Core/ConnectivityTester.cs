@@ -37,7 +37,9 @@ public sealed class ConnectivityTester
             }
         };
         using var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
-        using var request = new HttpRequestMessage(HttpMethod.Head, target.Url)
+        // Only catalog-defined targets reach this layer. GET stops after headers just
+        // like HEAD; no stream/video/download body is consumed by the tester.
+        using var request = new HttpRequestMessage(target.Method == "GET" ? HttpMethod.Get : HttpMethod.Head, target.Url)
         { Version = HttpVersion.Version11, VersionPolicy = HttpVersionPolicy.RequestVersionExact };
         request.Headers.ConnectionClose = true;
         try

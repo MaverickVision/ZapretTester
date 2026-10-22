@@ -82,7 +82,7 @@ public sealed class LeagueTests
             {"ProfileId":"GENERAL.BAT","Fingerprint":"hash","IsReliable":true,"Endpoints":[],"TestedAt":"2026-09-28T00:00:00Z","Error":null}
             """)!;
         var migrated = ResultKeys.Migrate(new Dictionary<string, ProfileTestResult> { [old.ProfileId] = old });
-        Assert.Same(old, migrated[ResultKeys.For(TestSuiteId.Discord, "RU", old.ProfileId)]);
+        Assert.Same(old, migrated[ResultKeys.Legacy(TestSuiteId.Discord, "RU", old.ProfileId)]);
         Assert.Equal(4, old.ExpectedEndpoints);
         var ru = Installation().Regions["RU"];
         var euw = Installation().Regions["EUW"];

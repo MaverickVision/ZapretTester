@@ -16,13 +16,14 @@ public static class FilterCompiler
                 throw new UnsupportedProfileException("Unsupported launch/capture/output argument: " + option);
         }
     }
-    public static async Task<string> ExportAsync(SnapshotProfile profile, string output, CancellationToken token)
+    public static async Task<string> ExportAsync(SnapshotProfile profile, string output, CancellationToken token, Action? processStarted = null)
     {
         ValidateSourceArguments(profile.Arguments);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
         timeout.CancelAfter(TimeSpan.FromSeconds(10));
         await using var process = OwnedProcess.Start(profile.Executable, profile.WorkingDirectory,
             profile.Arguments.Append("--wf-save=" + Path.GetFullPath(output)));
+        processStarted?.Invoke();
         var code = await process.WaitExitAsync(timeout.Token);
         if (code != 0 || !File.Exists(output)) throw new IOException($"winws filter export failed ({code}): {process.Output}");
         var filter = (await File.ReadAllTextAsync(output, token)).Trim();

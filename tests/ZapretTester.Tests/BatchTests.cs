@@ -15,31 +15,27 @@ public sealed class BatchTests
     private static ResolvedSuite Resolved(SuiteDefinition suite) => new(suite.Id, suite.Region, suite, null);
 
     [Fact]
-    public void FullPlanSharesOnlyIdenticalArgumentsAndFitsExistingPool()
+    public void FullPlanUsesOneCommonVariantPerStrategyAndFitsExistingPool()
     {
         var profiles = Profiles();
         var plan = BatchPlan.Create(profiles, profiles.Select(p => p.Profile!.Id).ToArray(),
             [Resolved(SuiteDefinition.Discord), Resolved(League()), Resolved(SuiteDefinition.YouTube)], 2, 1000);
-        Assert.Equal(44, plan.Jobs.Count); Assert.Equal(66, plan.Participants.Count); Assert.Equal(528, plan.RequiredPorts);
+        Assert.Equal(22, plan.Jobs.Count); Assert.Equal(66, plan.Participants.Count); Assert.Equal(528, plan.RequiredPorts);
         Assert.Empty(plan.Blocked);
-        Assert.Equal(22, plan.Jobs.Count(j => j.Suites.Count == 2));
+        Assert.Equal(22, plan.Jobs.Count(j => j.Suites.Count == 3));
         foreach (var job in plan.Jobs)
         {
             var original = job.Profile.Arguments;
-            if (job.Suites.Count == 2)
-            {
-                Assert.Equal(new[] { TestSuiteId.Discord, TestSuiteId.YouTube }, job.Suites.Select(s => s.Id));
-                Assert.All(job.Suites, suite => Assert.Equal(original, LeagueAdapter.Adapt(original, suite)));
-                Assert.Equal(new[] { TestSuiteId.Discord, TestSuiteId.YouTube, TestSuiteId.Discord, TestSuiteId.YouTube },
-                    BatchPlan.InterleavedTargets(job).Take(4).Select(t => t.Suite.Id));
-            }
-            else Assert.Equal(TestSuiteId.LeagueOfLegends, job.Suites[0].Id);
+            Assert.Equal(new[] { TestSuiteId.Discord, TestSuiteId.LeagueOfLegends, TestSuiteId.YouTube }, job.Suites.Select(s => s.Id));
+            Assert.Equal(new[] { TestSuiteId.Discord, TestSuiteId.LeagueOfLegends, TestSuiteId.YouTube, TestSuiteId.Discord },
+                BatchPlan.InterleavedTargets(job).Take(4).Select(t => t.Suite.Id));
+            Assert.NotEqual(original, VariantAdapter.Adapt(original, job.Suites));
         }
     }
 
     [Theory]
-    [InlineData(1, 1)] [InlineData(2, 1)] [InlineData(3, 2)] [InlineData(4, 1)]
-    [InlineData(5, 1)] [InlineData(6, 2)] [InlineData(7, 2)]
+    [InlineData(1, 1)] [InlineData(2, 1)] [InlineData(3, 1)] [InlineData(4, 1)]
+    [InlineData(5, 1)] [InlineData(6, 1)] [InlineData(7, 1)]
     public void EveryServiceCombinationHasExpectedProcessCount(int mask, int jobs)
     {
         var profiles = Profiles();
@@ -50,13 +46,13 @@ public sealed class BatchTests
     }
 
     [Fact]
-    public void MissingLeagueBlocksOnlyItsParticipantsAndInvalidRequestsFailBeforeRun()
+    public void MissingLeagueBlocksTheWholeVariantAndInvalidRequestsFailBeforeRun()
     {
         var profiles = Profiles(); var ids = profiles.Select(p => p.Profile!.Id).ToArray();
         var suites = new[] { Resolved(SuiteDefinition.Discord), new ResolvedSuite(TestSuiteId.LeagueOfLegends, "RU", null, "Missing LoL"), Resolved(SuiteDefinition.YouTube) };
         var plan = BatchPlan.Create(profiles, ids, suites, 2, 1000);
-        Assert.Equal(22, plan.Jobs.Count); Assert.Equal(22, plan.Blocked.Count); Assert.Equal(352, plan.RequiredPorts);
-        Assert.Throws<InvalidOperationException>(() => BatchPlan.Create(profiles, ids, suites, 2, 100));
+        Assert.Empty(plan.Jobs); Assert.Equal(66, plan.Blocked.Count); Assert.Equal(0, plan.RequiredPorts);
+        Assert.Throws<InvalidOperationException>(() => BatchPlan.Create(profiles, ids, [Resolved(SuiteDefinition.Discord)], 2, 100));
         Assert.Throws<ArgumentException>(() => BatchPlan.Create(profiles, [], suites, 2, 1000));
         Assert.Throws<ArgumentException>(() => BatchPlan.Create(profiles, ids, [], 2, 1000));
         Assert.Throws<ArgumentException>(() => BatchPlan.Create(profiles, ["unknown"], suites, 2, 1000));
