@@ -16,11 +16,14 @@ public sealed class CombinedVariantTests
     private static SuiteDefinition[] Definitions() => Enum.GetValues<TestSuiteId>().Select(id => id == TestSuiteId.LeagueOfLegends ? League() : ServiceCatalog.Resolve(id)).ToArray();
     private static ResolvedSuite[] Resolve(IEnumerable<SuiteDefinition> suites) => suites.Select(s => new ResolvedSuite(s.Id, s.Region, s, null)).ToArray();
 
-    [Fact]
-    public void All63CombinationsUseOneWorkerPerStrategyAndStrictUniquePortBudget()
+    [Theory]
+    [InlineData("Fixtures1103")]
+    [InlineData("Fixtures1104")]
+    public void All63CombinationsUseOneWorkerPerStrategyAndStrictUniquePortBudget(string fixture)
     {
-        var profiles = Profiles();
+        var profiles = Profiles(fixture);
         Assert.Equal(22, profiles.Count);
+        Assert.All(profiles, p => Assert.Null(p.Error));
         var definitions = Definitions();
         for (var mask = 1; mask < 64; mask++)
         {
@@ -42,6 +45,7 @@ public sealed class CombinedVariantTests
     [Theory]
     [InlineData("Fixtures")]
     [InlineData("Fixtures1103")]
+    [InlineData("Fixtures1104")]
     public void AdapterPreservesEveryOriginalGroupIncludingGoogleAndAddsOnlySelectedExtraHosts(string fixture)
     {
         var definitions = Definitions();

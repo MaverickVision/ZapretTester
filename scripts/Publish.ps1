@@ -23,7 +23,7 @@ Copy-Item -LiteralPath (Join-Path $project 'IMPLEMENTATION_STATUS.md') -Destinat
 $guideSource = Join-Path $project 'docs'
 $guideDestination = Join-Path $appDirectory 'docs'
 New-Item -ItemType Directory -Path $guideDestination -Force | Out-Null
-foreach ($file in @('USER_GUIDE.ru.md', 'USER_GUIDE.ru.html', 'zapret-scoring-dashboard.png', 'COMPATIBILITY-1.10.3.md', 'PERFORMANCE-1.1.0.md')) {
+foreach ($file in @('USER_GUIDE.ru.md', 'USER_GUIDE.ru.html', 'zapret-scoring-dashboard.png', 'COMPATIBILITY-1.10.3.md', 'COMPATIBILITY-1.10.4.md', 'PERFORMANCE-1.1.0.md')) {
     Copy-Item -LiteralPath (Join-Path $guideSource $file) -Destination $guideDestination
 }
 Copy-Item -LiteralPath (Join-Path $guideSource 'USER_GUIDE.ru.html') -Destination (Join-Path $OutputDirectory 'ИНСТРУКЦИЯ.html')

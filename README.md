@@ -6,9 +6,9 @@
 
 Приложение для Windows 11 x64 проверяет HTTPS-службы через каждую выбранную стратегию и показывает **доступность до 24/24**, **отклик HTTPS до 10 баллов** и подробности ошибок. Основной вариант включается только по вашему выбору.
 
-**[Скачать последнюю сборку 1.1.0-preview.1 для Windows x64](https://github.com/MaverickVision/ZapretTester/releases/download/v1.1.0-preview.1/ZapretTester-win-x64.zip)** · [Страница выпуска](https://github.com/MaverickVision/ZapretTester/releases/tag/v1.1.0-preview.1) · [Полная инструкция](docs/USER_GUIDE.ru.md) · [Сообщить об ошибке](https://github.com/MaverickVision/ZapretTester/issues)
+**[Скачать последнюю сборку 1.1.0 для Windows x64](https://github.com/MaverickVision/ZapretTester/releases/download/v1.1.0/ZapretTester-win-x64.zip)** · [Страница выпуска](https://github.com/MaverickVision/ZapretTester/releases/tag/v1.1.0) · [Полная инструкция](docs/USER_GUIDE.ru.md) · [Сообщить об ошибке](https://github.com/MaverickVision/ZapretTester/issues)
 
-**Предварительный выпуск от 22 октября 2026.** Сборка, 166 автоматических тестов и проверка настоящего WPF-интерфейса пройдены. Полная живая сетевая приёмка новой общей очереди ещё не завершена; этот выпуск отмечен как pre-release. [Статус проверок и ограничения](IMPLEMENTATION_STATUS.md).
+**Стабильный выпуск от 22 октября 2026.** Пройдены сборка, 174 автоматических теста, проверка настоящего WPF-интерфейса и живая сетевая приёмка на **Flowseal 1.10.4**. [Отчёт совместимости 1.10.4](docs/COMPATIBILITY-1.10.4.md). [Статус проверок и ограничения](IMPLEMENTATION_STATUS.md).
 
 ![Единая панель Zapret Tester](docs/zapret-scoring-dashboard.png)
 
@@ -17,7 +17,7 @@
 В готовом архиве всего три элемента верхнего уровня: **ZapretTester.exe** — запуск, **ИНСТРУКЦИЯ.html** — руководство и **app** — служебные файлы. Переносите папку целиком; содержимое `app` вручную запускать не нужно. Кнопка **«О программе»** показывает разработчика, версию, лицензию и ссылку на GitHub.
 
 1. В **Releases → Assets** скачайте `ZapretTester-win-x64.zip` и распакуйте весь архив. **Source code** для запуска не нужен. Готовая сборка уже содержит .NET.
-2. Отдельно скачайте совместимую [Flowseal 1.10.3](https://github.com/Flowseal/zapret-discord-youtube/releases/tag/1.10.3) или [1.10.2](https://github.com/Flowseal/zapret-discord-youtube/releases/tag/1.10.2).
+2. Отдельно скачайте совместимую [Flowseal 1.10.4](https://github.com/Flowseal/zapret-discord-youtube/releases/tag/1.10.4), [1.10.3](https://github.com/Flowseal/zapret-discord-youtube/releases/tag/1.10.3) или [1.10.2](https://github.com/Flowseal/zapret-discord-youtube/releases/tag/1.10.2).
 3. Запустите `ZapretTester.exe` и выберите корневую папку Flowseal с `general*.bat`, `bin` и `lists`.
 4. Если Flowseal уже работает как служба, используйте **«Подготовить Flowseal к проверке»** в меню основного процесса. Подтвердите сохранение её состояния и переход под управление тестера.
 5. Отметьте нужные сервисы и стратегии, нажмите **«Проверить выбранное»**. Подтвердите системный запрос администратора для Helper.
@@ -96,7 +96,7 @@ IPv4, HTTP/1.1, штатная проверка TLS, без proxy и автом�
 ## Совместимость и сохранность
 
 - Windows 11 x64; другие системы не проверены.
-- Исследованы 22 стратегии Flowseal 1.10.2 и 1.10.3, включая новый формат GameFilter 1.10.3.
+- Проверены 22 стратегии Flowseal 1.10.2, 1.10.3 и **1.10.4**, включая формат GameFilter 1.10.3/1.10.4.
 - У исследованных сборок совпадают бинарники; их SHA-256 закреплены в `isolation-certificate.json`. Другой движок требует отдельной проверки изоляции. Неизвестные BAT-конструкции отклоняются; поддержка всех будущих версий не обещается.
 - Для LoL адреса и регион читаются из установленной игры. Токены не используются.
 - GUI работает без повышения прав; сетевой Helper требует UAC. Неизвестный обработчик WinDivert блокирует запуск или отменяет серию.
@@ -106,7 +106,7 @@ IPv4, HTTP/1.1, штатная проверка TLS, без proxy и автом�
 
 Настройки, результаты и журнал — в `%LOCALAPPDATA%\ZapretTester`; защищённые снимки и резервная конфигурация службы — в `%PROGRAMDATA%\ZapretTester`. Не публикуйте `session.json` и всю папку данных в отчёте об ошибке.
 
-[Устранение проблем](docs/USER_GUIDE.ru.md#troubleshooting) · [Приёмка Flowseal 1.10.3](docs/COMPATIBILITY-1.10.3.md)
+[Устранение проблем](docs/USER_GUIDE.ru.md#troubleshooting) · [Приёмка Flowseal 1.10.4](docs/COMPATIBILITY-1.10.4.md) · [История 1.10.3](docs/COMPATIBILITY-1.10.3.md)
 
 ## Для разработчиков
 

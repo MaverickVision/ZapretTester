@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 
 namespace ZapretTester.Windows;
@@ -8,6 +10,8 @@ public static class NetworkEnvironment
 {
     public static bool IsApplicationConnection(TcpState state) => state is not
         (TcpState.TimeWait or TcpState.FinWait1 or TcpState.FinWait2 or TcpState.Closing or TcpState.LastAck or TcpState.Closed or TcpState.DeleteTcb);
+    public static bool CanUseIpv4TestPort(IPEndPoint endpoint) => endpoint.AddressFamily == AddressFamily.InterNetwork
+        || endpoint.Address.IsIPv4MappedToIPv6 || endpoint.Address.Equals(IPAddress.IPv6Any);
     public static async Task<string> ValidatePoolAsync(int first, int last, CancellationToken token = default)
     {
         var dynamicPorts = await Netsh(token, "interface", "ipv4", "show", "dynamicport", "tcp");
@@ -22,9 +26,12 @@ public static class NetworkEnvironment
         // FIN/CLOSING/TIME_WAIT are kernel cleanup after the application closed its
         // socket. Exclusive bind still skips their ports; they must not block the entire pool.
         var ip = IPGlobalProperties.GetIPGlobalProperties();
-        if (ip.GetActiveTcpConnections().Any(c => IsApplicationConnection(c.State) && c.LocalEndPoint.Port >= first && c.LocalEndPoint.Port <= last)
-            || ip.GetActiveTcpListeners().Any(p => p.Port >= first && p.Port <= last))
-            throw new InvalidOperationException("The reserved test pool contains an active connection/listener. Choose an unused pool.");
+        // Filters and leases use IPv4 only. Specific IPv6 addresses (including ::1)
+        // cannot interfere. Keep wildcard :: conservative because it may be dual-stack.
+        var occupied = ip.GetActiveTcpConnections().Where(c => IsApplicationConnection(c.State)).Select(c => c.LocalEndPoint)
+            .Concat(ip.GetActiveTcpListeners()).FirstOrDefault(p => CanUseIpv4TestPort(p) && p.Port >= first && p.Port <= last);
+        if (occupied != null)
+            throw new InvalidOperationException($"Тестовый пул занят IPv4-соединением или слушателем {occupied}. Выберите свободный диапазон портов.");
         var global = await Netsh(token, "interface", "tcp", "show", "global");
         return $"Windows dynamic TCP: {values[0]}–{dynamicEnd}\n{global.Trim()}";
     }
